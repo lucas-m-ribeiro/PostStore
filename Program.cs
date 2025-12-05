@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Poststore.Data;
+using Poststore.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,25 @@ builder.Services.AddDbContext<AppDbContext>(x =>
 
 var app = builder.Build();
 
-app.MapGet("/", () => "Hello World!");
+//realiza um create de Categories
+app.MapPost("/v1/categories", async  (AppDbContext context, Category category) => 
+{
+    {
+        await context.Categories.AddAsync(category);
+        await context.SaveChangesAsync();
+        return Results.Ok(category);
+    }
+}
+);
+
+//realiza um get de produtos
+app.MapGet("/v1/categories", async  (AppDbContext context) => 
+    {
+        var categories = await context.Categories
+        .AsNoTracking()
+        .ToListAsync();
+        return Results.Ok(categories);
+    }
+);
 
 app.Run();
