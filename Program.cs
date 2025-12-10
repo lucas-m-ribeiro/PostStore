@@ -1,12 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Poststore.Data;
 using Poststore.Models;
+using Poststore.Request;
 
 var builder = WebApplication.CreateBuilder(args);
 
 //obtendo a connection string do appSettngs.json
 //se estiver nulo, lança a exception
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
 //configurando o contexto para usar o PostgreSQL
@@ -15,25 +16,54 @@ builder.Services.AddDbContext<AppDbContext>(x =>
 
 var app = builder.Build();
 
-//realiza um create de Categories
-app.MapPost("/v1/categories", async  (AppDbContext context, Category category) => 
+app.MapPost("/v1/categories", async (AppDbContext context, CreateCategoryRequest request) =>
 {
+    var category = new Category
     {
-        await context.Categories.AddAsync(category);
-        await context.SaveChangesAsync();
-        return Results.Ok(category);
-    }
-}
-);
+        Heading = new Heading
+        {
+            Title = request.Title,
+            Slug = request.Slug
+        }
+    };
+    await context.Categories.AddAsync(category);
+    await context.SaveChangesAsync();
+    return Results.Created();
+});
 
-//realiza um get de produtos
-app.MapGet("/v1/categories", async  (AppDbContext context) => 
-    {
-        var categories = await context.Categories
+app.MapGet("/v1/categories", async (AppDbContext context) =>
+{
+    var products = await context
+        .Categories
         .AsNoTracking()
         .ToListAsync();
-        return Results.Ok(categories);
-    }
-);
+    return Results.Ok(products);
+});
+
+app.MapPost("/v1/products", async (AppDbContext context, ProductRequest request) =>
+{
+    var product = new Product
+    {
+        CategoryId = request.CategoryId,
+
+        Heading = new Heading
+        {
+            Title = request.Title,
+            Slug = request.Slug,
+        }
+    };
+    await context.Products.AddAsync(product);
+    await context.SaveChangesAsync();
+    return Results.Created();
+});
+
+app.MapGet("/v1/products", async (AppDbContext context) =>
+{
+    var products = await context
+        .Products
+        .AsNoTracking()
+        .ToListAsync();
+    return Results.Ok(products);
+});
 
 app.Run();
